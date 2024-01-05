@@ -10,10 +10,19 @@ import os
 
 from rpyc.utils.server import ThreadedServer
 
+'''Constants Definition: BLOCK_SIZE, REPLICATION_FACTOR, and MINIONS are defined. These constants are used for block size, 
+replication factor of the blocks, and the addresses of the minion servers.'''
+
 BLOCK_SIZE = 100
 REPLICATION_FACTOR = 2
 MINIONS = {"1": ("127.0.0.1", 8000),
            "2": ("127.0.0.1", 9000),}
+
+
+'''Class MasterService(rpyc.Service): Defines the MasterService class that extends rpyc.Service.
+file_block dictionary tracks which blocks make up a file.
+block_minion dictionary tracks which minions have a copy of a block.
+minions dictionary holds the address information of each minion.'''
 
 class MasterService(rpyc.Service):
     """
@@ -28,11 +37,12 @@ class MasterService(rpyc.Service):
 
     block_size = BLOCK_SIZE
     replication_factor = REPLICATION_FACTOR
+'''exposed_read: Method to handle read requests for a file. It returns a mapping of block IDs to minion addresses for each block of the file.'''
 
     def exposed_read(self, file):
 
         mapping = []
-        # iterate over all of file's blocks
+        # iterate over all of the file's blocks
         for blk in self.file_block[file]:
             minion_addr = []
             # get all minions that contain that block
@@ -41,6 +51,7 @@ class MasterService(rpyc.Service):
 
             mapping.append({"block_id": blk, "block_addr": minion_addr})
         return mapping
+'''exposed_write: Method to handle write requests. It calculates how many blocks are needed for the file and calls alloc_blocks.'''
 
     def exposed_write(self, file, size):
 
@@ -48,6 +59,7 @@ class MasterService(rpyc.Service):
 
         num_blocks = int(math.ceil(float(size) / self.block_size))
         return self.alloc_blocks(file, num_blocks)
+'''alloc_blocks: Allocates blocks for a file on random minions for replication.'''
 
     def alloc_blocks(self, file, num_blocks):
         return_blocks = []
@@ -64,6 +76,7 @@ class MasterService(rpyc.Service):
 
         return return_blocks
 
+'''Starts a threaded server for the master service.'''
 
 if __name__ == "__main__":
     t = ThreadedServer(MasterService(), port=2131, protocol_config={
